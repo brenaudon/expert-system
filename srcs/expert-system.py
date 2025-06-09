@@ -1,6 +1,10 @@
 """
 This script serves as the entry point for the Expert System.
+
+Dependencies:
+    - sys
 """
+import sys
 
 def main():
     """
