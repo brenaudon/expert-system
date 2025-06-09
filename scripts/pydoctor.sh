@@ -1,4 +1,4 @@
-PROJECT_NAME=Leaffliction
+PROJECT_NAME=expert-system
 
 pydoctor \
     --project-name=${PROJECT_NAME} \
