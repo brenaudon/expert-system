@@ -18,6 +18,13 @@ from typing import List, Set, Tuple, Union
 # Tokeniser & Grammar ----------------------------------------------------------
 
 TOKEN_RE = re.compile(r"\s*([A-Z]|!|\+|\||\^|\(|\)|=>|<=>|:)\s*")
+"""
+Regular expression to match tokens in the propositional logic expression.
+It matches:
+    - Single uppercase letters (A-Z) representing facts.
+    - Operators: NOT (!), AND (+), OR (|), XOR (^), implication (=>), biconditional (<=>).
+    - Parentheses: left ((), right ()).
+"""
 
 class TokenType(Enum):
     """
@@ -125,9 +132,20 @@ PRECEDENCE = {
     TokenType.XOR: 2,
     TokenType.OR: 1,
 }
+"""
+Precedence levels for operators in propositional logic.
+The higher the number, the higher the precedence.
+Precedence is used to determine the order of operations in expressions.
+"""
 
 LEFT_ASSOC = {TokenType.AND, TokenType.OR, TokenType.XOR}
+"""
+Left associative operators are evaluated left to right.
+"""
 RIGHT_ASSOC = {TokenType.NOT}
+"""
+Right associative operators are evaluated right to left.
+"""
 
 
 def tokenize(expr: str) -> List[Token]:
