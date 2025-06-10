@@ -23,15 +23,15 @@ class TokenType(Enum):
     """
     Enum representing different types of tokens in propositional logic expressions.
     Each token type corresponds to a specific operator or fact in the logic expression.
-    - FACT: Represents a propositional fact (single letter).
-    - NOT: Represents the negation operator.
-    - AND: Represents the logical AND operator.
-    - OR: Represents the logical OR operator.
-    - XOR: Represents the exclusive OR operator.
-    - IMPLIES: Represents the implication operator (=>).
-    - IFF: Represents the biconditional operator (<=>).
-    - LPAREN: Represents the left parenthesis.
-    - RPAREN: Represents the right parenthesis.
+        - FACT: Represents a propositional fact (single letter).
+        - NOT: Represents the negation operator.
+        - AND: Represents the logical AND operator.
+        - OR: Represents the logical OR operator.
+        - XOR: Represents the exclusive OR operator.
+        - IMPLIES: Represents the implication operator (=>).
+        - IFF: Represents the biconditional operator (<=>).
+        - LPAREN: Represents the left parenthesis.
+        - RPAREN: Represents the right parenthesis.
     """
     FACT = auto()
     NOT = auto()
