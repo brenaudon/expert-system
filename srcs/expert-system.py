@@ -2,18 +2,25 @@
 This script serves as the entry point for the Expert System.
 
 Dependencies:
-    - sys
+    - argparse
+    - parser (custom module for parsing input files)
 """
-import sys
+import argparse
+from parser import parse_file
+
 
 def main():
     """
     Main function to run the Expert System.
     """
-    if len(sys.argv) != 2:
-        print("Usage: python expert-system.py <input_file>")
-        sys.exit(1)
-    print("Welcome to the Expert System!")
+    parser = argparse.ArgumentParser(description="Expert System – Propositional Calculus")
+    parser.add_argument("file", help="Path to input file describing rules/facts/queries")
+    parser.add_argument("-i", "--interactive", action="store_true", help="Enable interactive REPL after processing queries (bonus)")
+    args = parser.parse_args()
+
+    rules, init_facts, queries = parse_file(args.file)
+
+    print("Initial facts:", " ".join(sorted(init_facts)) or "(none)")
 
 if __name__ == "__main__":
     main()
