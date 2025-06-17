@@ -123,9 +123,6 @@ class BinaryNode(Node):
 
 # Parser (shunting‑yard) -------------------------------------------------------
 
-# Precedence and associativity for operators
-# Precedence defines the order of operations
-# Associativity defines how operators of the same precedence are grouped
 PRECEDENCE = {
     TokenType.NOT: 4,
     TokenType.AND: 3,
@@ -141,6 +138,7 @@ Precedence is used to determine the order of operations in expressions.
 LEFT_ASSOC = {TokenType.AND, TokenType.OR, TokenType.XOR}
 """
 Left associative operators are evaluated left to right.
+Associativity defines how operators of the same precedence are grouped
 """
 RIGHT_ASSOC = {TokenType.NOT}
 """

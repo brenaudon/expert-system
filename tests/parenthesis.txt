@@ -1,0 +1,5 @@
+A + (B | C) => D #C isn't enough to determine D
+E + F | G => H #G is enough to determine H
+
+=CG
+?DH

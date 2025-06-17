@@ -1,0 +1,8 @@
+A + B => C
+C => D
+D => A
+
+=B
+?ACD
+
+# Cycle detected for A. C and D are just Unknowns as A is needed to determine them.

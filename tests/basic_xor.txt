@@ -1,0 +1,7 @@
+A ^ B => C
+D ^ E => F
+G ^ H => I # G ^ H is false so I stays as default false
+F ^ J => K # J false by default so K is true
+
+=AEGH
+?CFIK
