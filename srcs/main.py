@@ -11,7 +11,39 @@ Dependencies:
 
 import argparse
 from parser import parse_file
-from expert_system import ExpertSystem
+from expert_system import ExpertSystem, Truth
+
+def interactive(es: ExpertSystem):
+    print("Entering interactive mode. Commands:\n  +X : set fact X true\n  -X : set fact X false\n  ?X : query fact X\n  /q : quit")
+    while True:
+        try:
+            cmd = input("expert> ").strip().upper()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not cmd:
+            continue
+        if cmd == "/Q":
+            break
+        if cmd.startswith("+") and len(cmd) == 2 and cmd[1].isalpha():
+            fact = cmd[1]
+            es.facts_state[fact] = Truth.TRUE
+            es.memo.clear()
+            print(f"Set {fact}=True")
+            continue
+        if cmd.startswith("-") and len(cmd) == 2 and cmd[1].isalpha():
+            fact = cmd[1]
+            es.facts_state[fact] = Truth.FALSE
+            es.memo.clear()
+            print(f"Set {fact}=False")
+            continue
+        if cmd.startswith("?") and len(cmd) == 2 and cmd[1].isalpha():
+            fact = cmd[1]
+            res = es.query(fact)
+            print(f"?{fact}: {res}")
+            es.explain(fact)
+            continue
+        print("Unrecognised command.")
 
 def main():
     """
@@ -46,8 +78,7 @@ def main():
         print()
 
     if args.interactive:
-        pass
-        #TODO: Implement interactive mode
+        interactive(es)
 
 
 if __name__ == "__main__":
