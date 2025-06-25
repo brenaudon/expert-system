@@ -12,6 +12,13 @@ from enum import Enum, auto
 class Truth(Enum):
     """
     Represents the truth value of a fact in the expert system.
+
+    @ivar TRUE: Represents a fact that is true.
+    @type TRUE: Truth
+    @ivar FALSE: Represents a fact that is false.
+    @type FALSE: Truth
+    @ivar UNKNOWN: Represents a fact whose truth value is unknown.
+    @type UNKNOWN: Truth
     """
     TRUE = auto()
     FALSE = auto()
