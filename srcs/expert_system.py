@@ -47,20 +47,14 @@ class ExpertSystem:
     """
     Represents the expert system that processes rules and facts to answer queries.
 
-    @ivar rules: List of rules that define the system's logic.
-    @type rules: List[Rule]
-    @ivar facts_state: Current state of known facts (True/False).
-    @type facts_state: Dict[str, Truth]
-    @ivar fact_to_rules: Maps each fact to the rules that can conclude it.
-    @type fact_to_rules: Dict[str, List[Rule]]
-    @ivar memo: Memoization cache for previously computed facts.
-    @type memo: Dict[str, Truth]
-    @ivar true_rules: Set of rules that have been proven to be true (OR and XOR in conclusions).
-    @type true_rules: Set[str]
-    @ivar reason_log: Log of reasoning steps for each fact.
+    @ivar reason_log: A dictionary mapping facts to lists of reasoning steps explaining their truth value.
     @type reason_log: Dict[str, List[str]]
-    @ivar cycles: Set of facts that are part of a cycle in the reasoning graph.
+    @ivar cycles: A set of facts that are part of cycles in the reasoning graph.
     @type cycles: Set[str]
+    @ivar facts: A dictionary mapping fact names to their corresponding FactV objects.
+    @type facts: Dict[str, FactV]
+    @ivar rules: A list of RuleV objects representing the rules defined in the system.
+    @type rules: List[RuleV]
     """
     def __init__(self, rules: List[Rule], facts_init: Set[str]):
         """
@@ -86,6 +80,7 @@ class ExpertSystem:
         for f in facts_init:
             fact_v = fv(f)
             fact_v.state = Truth.TRUE
+            fact_v.initial_fact = True
             self.reason_log[f].append(f"{f} is an initial fact.")
 
         for idx, r in enumerate(rules):
@@ -166,6 +161,12 @@ class ExpertSystem:
         """
         # Already known
         if self.facts[fact].state:
+            if self.facts[fact].state == Truth.TRUE and fact not in self.reason_log:
+                if self.facts[fact].initial_fact:
+                    self.reason_log[fact].append(f"{fact} is an initial fact.")
+                self.reason_log[fact].append(f"{fact} is already known to be TRUE.")
+            elif self.facts[fact].state == Truth.FALSE and fact not in self.reason_log:
+                self.reason_log[fact].append(f"{fact} is already known to be FALSE.")
             return self.facts[fact].state
 
         # Avoid infinite recursion (cycles)
