@@ -47,8 +47,8 @@ F | H => I ^ J
 To set up the project, follow these steps:
 1. **Clone the repository:**
    ```bash
-    git clone git@github.com:brenaudon/Leaffliction.git Leaffliction
-    cd Leaffliction
+    git clone git@github.com:brenaudon/expert-system.git expert-system
+    cd expert-system
     ```
 2. **Install dependencies:**
    Optionally, you can create a virtual environment to isolate the project dependencies.
