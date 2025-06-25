@@ -6,26 +6,41 @@ It provides explanations for the reasoning behind each fact's truth value.
 
 Dependencies:
     - collections
-    - enum
     - typing
+    - truth: Contains the Truth enumeration for representing truth values (TRUE, FALSE, UNKNOWN).
+    - graph: Contains definitions for FactV and RuleV, which represent vertices in the reasoning graph.
     - parser.py: Contains definitions for Rule, Node, FactNode, UnaryNode, BinaryNode, and TokenType.
 
 """
+
 from collections import defaultdict
-from enum import Enum, auto
 from typing import Dict, List, Set
+from truth import Truth
+from graph import FactV, RuleV
 from parser import Rule, Node, FactNode, UnaryNode, BinaryNode, TokenType
 
-class Truth(Enum):
-    """
-    Represents the truth value of a fact in the expert system.
-    """
-    TRUE = auto()
-    FALSE = auto()
-    UNKNOWN = auto()
 
-    def __str__(self):
-        return self.name
+def _collect_facts(node: Node, bucket: Set[str]) -> None:
+    """
+    Recursively collects all fact names from a node and adds them to the provided bucket.
+    This function traverses the node structure and gathers all fact names that are part of the node.
+    It handles different types of nodes (FactNode, UnaryNode, BinaryNode) and adds fact names to the bucket.
+    This is used to gather all facts that are part of a rule or conclusion.
+
+    @param node: The node to traverse and collect facts from.
+    @type node: Node
+    @param bucket: A set to which the collected fact names will be added.
+    @type bucket: Set[str]
+
+    @return: None
+    """
+    if isinstance(node, FactNode):
+        bucket.add(node.name)
+    elif isinstance(node, UnaryNode):
+        _collect_facts(node.child, bucket)
+    elif isinstance(node, BinaryNode):
+        _collect_facts(node.left,  bucket)
+        _collect_facts(node.right, bucket)
 
 
 class ExpertSystem:
@@ -56,19 +71,42 @@ class ExpertSystem:
         @param facts_init: Set of initial facts known to the system.
         @type facts_init: Set[str]
         """
-        self.rules = rules
-        self.facts_state: Dict[str, Truth] = defaultdict(lambda: Truth.FALSE)
-        for f in facts_init:
-            self.facts_state[f] = Truth.TRUE
-        # map fact -> rules that can conclude it
-        self.fact_to_rules: Dict[str, List[Rule]] = defaultdict(list)
-        for r in self.rules:
-            for f in self.collect_conclusion_facts(r.conclusions):
-                self.fact_to_rules[f].append(r)
-        self.memo: Dict[str, Truth] = {}
-        self.true_rules: Set[str] = set()
         self.reason_log: Dict[str, List[str]] = defaultdict(list)
         self.cycles: Set[str] = set()
+
+        # Global graph of facts and rules
+        self.facts: Dict[str, FactV] = {}
+        self.rules: List[RuleV] = []
+
+        def fv(name: str) -> FactV:
+            if name not in self.facts:
+                self.facts[name] = FactV(name)
+            return self.facts[name]
+
+        for f in facts_init:
+            fact_v = fv(f)
+            fact_v.state = Truth.TRUE
+            self.reason_log[f].append(f"{f} is an initial fact.")
+
+        for idx, r in enumerate(rules):
+            rv = RuleV(idx, r.lhs, r.conclusions, text=r.text)
+            self.rules.append(rv)
+
+            # premise facts
+            prem_set: Set[str] = set()
+            _collect_facts(r.lhs, prem_set)
+            for f in prem_set:
+                fact_v = fv(f)
+                rv.in_facts.add(fact_v)
+                fact_v.out_rules.add(rv)
+
+            # conclusion facts
+            conc_set: Set[str] = set()
+            _collect_facts(r.conclusions, conc_set)
+            for f in conc_set:
+                fact_v = fv(f)
+                rv.out_facts.add(fact_v)
+                fact_v.in_rules.add(rv)
 
 
     def collect_conclusion_facts(self, node: Node) -> Set[str]:
@@ -105,7 +143,8 @@ class ExpertSystem:
         @return: The truth value of the fact (TRUE, FALSE, or UNKNOWN).
         @rtype: Truth
         """
-        if fact not in self.facts_state and fact not in self.fact_to_rules:
+        # Check if the fact is already known
+        if self.facts.get(fact) is None:
             self.reason_log[fact].append(f"No data about {fact}.")
             return Truth.FALSE
         return self.solve(fact, set())
@@ -116,8 +155,8 @@ class ExpertSystem:
         This method checks if the fact is already known, evaluates it based on the rules,
         and uses memoization to store results for future queries. It also handles cycles
         in the reasoning graph to prevent infinite recursion.
-        @param fact: The fact to evaluate.
 
+        @param fact: The fact to evaluate.
         @type fact: str
         @param path: Set of facts currently being evaluated to detect cycles.
         @type path: Set[str]
@@ -126,18 +165,8 @@ class ExpertSystem:
         @rtype: Truth
         """
         # Already known
-        if fact in self.memo:
-            return self.memo[fact]
-
-        # Initial fact
-        if self.facts_state[fact] == Truth.TRUE:
-            self.reason_log[fact].append(f"{fact} is an initial fact.")
-            self.memo[fact] = Truth.TRUE
-            return Truth.TRUE
-        # No rules for this fact
-        if self.facts_state[fact] == Truth.FALSE and fact not in self.fact_to_rules:
-            self.memo[fact] = Truth.FALSE
-            return Truth.FALSE
+        if self.facts[fact].state:
+            return self.facts[fact].state
 
         # Avoid infinite recursion (cycles)
         if fact in path:
@@ -149,17 +178,25 @@ class ExpertSystem:
         proved_true  = False
         proved_false = False
         unknown_due_to_disjunction = False
-        for rule in self.fact_to_rules.get(fact, []):
-            res = self.eval_expr(rule.lhs, path)
+        for rv in self.facts[fact].in_rules:          # global graph lookup
+            rule = self.rules[rv.idx]
+            if rule.truth == Truth.TRUE:
+                res = Truth.TRUE
+            else:
+                res = self.eval_expr(rule.premise, path)
             if res == Truth.TRUE:
-                self.true_rules.add(self.get_full_expression(rule.conclusions))
+                for f in rv.out_facts:
+                    for r in f.out_rules:
+                        tmp_path = set()
+                        if self.eval_expr(r.premise, tmp_path, true_node=rule.conclusions) == Truth.TRUE:
+                            r.truth = Truth.TRUE
                 if self.conclusion_guarantees_fact(rule.conclusions, fact):
                     self.reason_log[fact].append(
                         f"Rule '{rule.text}' fires and conclusively sets {fact} true.")
-                    self.memo[fact] = Truth.TRUE
+                    self.facts[fact].state = Truth.TRUE
                     proved_true = True
                 elif self.conclusion_negates_fact(rule.conclusions, fact):
-                    self.memo[fact] = Truth.FALSE
+                    self.facts[fact].state = Truth.FALSE
                     self.reason_log[fact].append(
                         f"Rule '{rule.text}' fires and conclusively sets {fact} false.")
                     proved_false = True
@@ -176,29 +213,29 @@ class ExpertSystem:
         if proved_true and proved_false:
             self.reason_log[fact].append(
                 f"Contradiction: some rules set {fact} true, others false.")
-            self.memo[fact] = Truth.UNKNOWN
+            self.facts[fact].state = Truth.UNKNOWN
             return Truth.UNKNOWN
         if proved_true:
-            self.memo[fact] = Truth.TRUE
+            self.facts[fact].state = Truth.TRUE
             return Truth.TRUE
         if proved_false:
-            self.memo[fact] = Truth.FALSE
+            self.facts[fact].state = Truth.FALSE
             return Truth.FALSE
         if unknown_due_to_disjunction:
-            self.memo[fact] = Truth.UNKNOWN
+            self.facts[fact].state = Truth.UNKNOWN
             # log cycle only if it really blocked the answer
             if fact in self.cycles:
                 self.reason_log[fact].append(
                     f"Cycle detected while evaluating {fact}.")
             return Truth.UNKNOWN
 
-        self.memo[fact] = Truth.FALSE
+        self.facts[fact].state = Truth.FALSE
         self.reason_log[fact].append(
             f"No rule proved {fact}; keeping default FALSE.")
         return Truth.FALSE
 
     # Evaluate arbitrary expression node
-    def eval_expr(self, node: Node, path: Set[str]) -> Truth:
+    def eval_expr(self, node: Node, path: Set[str], true_node: Node | None = None) -> Truth:
         """
         Evaluates a logical expression represented by a node in the expert system.
         This method recursively evaluates the expression based on the type of node
@@ -210,29 +247,27 @@ class ExpertSystem:
         @type node: Node
         @param path: A set of facts currently being evaluated to detect cycles.
         @type path: Set[str]
+        @param true_node: An optional node that, if matched, will return TRUE immediately.
+        @type true_node: Node | None
 
         @return: The truth value of the evaluated expression (TRUE, FALSE, or UNKNOWN).
         @rtype: Truth
         """
-
-        # Check if full expression truth is already known as part of a previous conclusion
-        key = self.get_full_expression(node)
-        if key in self.true_rules:
+        if true_node and node == true_node:
             return Truth.TRUE
-
         # Fact node
         if isinstance(node, FactNode):
             return self.solve(node.name, path)
         # Unary node (negation)
         if isinstance(node, UnaryNode):
-            child_val = self.eval_expr(node.child, path)
+            child_val = self.eval_expr(node.child, path, true_node)
             if child_val == Truth.UNKNOWN:
                 return Truth.UNKNOWN
             return Truth.FALSE if child_val == Truth.TRUE else Truth.TRUE
         # Binary node (AND, OR, XOR)
         if isinstance(node, BinaryNode):
-            left = self.eval_expr(node.left, path)
-            right = self.eval_expr(node.right, path)
+            left = self.eval_expr(node.left, path, true_node)
+            right = self.eval_expr(node.right, path, true_node)
             op = node.op
             if op == TokenType.AND:
                 if left == Truth.FALSE or right == Truth.FALSE:
@@ -301,28 +336,6 @@ class ExpertSystem:
             return (self.conclusion_negates_fact(node.left,  fact) or
                     self.conclusion_negates_fact(node.right, fact))
         return False
-
-    def get_full_expression(self, node: Node) -> str:
-        """
-        Returns a string representation of the full expression represented by the node.
-        This method recursively constructs the expression string based on the type of node.
-        It handles fact nodes, unary nodes (negation), and binary nodes (AND, OR, XOR).
-        This is used to store full expression results to handle OR and XOR in conclusions.
-
-        @param node: The node representing the expression.
-        @type node: Node
-
-        @return: A string representation of the full expression.
-        @rtype: str
-        """
-        if isinstance(node, FactNode):
-            return node.name
-        if isinstance(node, UnaryNode):
-            return '!' + self.get_full_expression(node.child)
-        if isinstance(node, BinaryNode):
-            sym = {TokenType.AND:'+', TokenType.OR:'|', TokenType.XOR:'^'}[node.op]
-            return '(' + self.get_full_expression(node.left) + sym + self.get_full_expression(node.right) + ')'
-        raise RuntimeError("bad node")
 
     # ---------------------------------------------------------------------
     def explain(self, fact: str):

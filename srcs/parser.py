@@ -211,7 +211,8 @@ def parse_expression(expr: str) -> Node:
         if stack[-1].type in (TokenType.LPAREN, TokenType.RPAREN):
             raise ValueError("Mismatched parentheses at end")
         pop_to_output(stack, output)
-    assert len(output) == 1 and isinstance(output[0], Node) # ensure single root node
+    if not(len(output) == 1 and isinstance(output[0], Node)): # ensure single root node
+        raise ValueError("No single root node in output")
     return output[0]  # type: ignore[index]
 
 
