@@ -51,6 +51,8 @@ class ExpertSystem:
     @type reason_log: Dict[str, List[str]]
     @ivar cycles: A set of facts that are part of cycles in the reasoning graph.
     @type cycles: Set[str]
+    @ivar true_nodes: A list of nodes that are guaranteed to be true.
+    @type true_nodes: List[str]
     @ivar facts: A dictionary mapping fact names to their corresponding FactV objects.
     @type facts: Dict[str, FactV]
     @ivar rules: A list of RuleV objects representing the rules defined in the system.
@@ -67,6 +69,7 @@ class ExpertSystem:
         """
         self.reason_log: Dict[str, List[str]] = defaultdict(list)
         self.cycles: Set[str] = set()
+        self.true_nodes = list()
 
         # Global graph of facts and rules
         self.facts: Dict[str, FactV] = {}
@@ -81,7 +84,6 @@ class ExpertSystem:
             fact_v = fv(f)
             fact_v.state = Truth.TRUE
             fact_v.initial_fact = True
-            self.reason_log[f].append(f"{f} is an initial fact.")
 
         for idx, r in enumerate(rules):
             rv = RuleV(idx, r.lhs, r.conclusions, text=r.text)
@@ -164,7 +166,8 @@ class ExpertSystem:
             if self.facts[fact].state == Truth.TRUE and fact not in self.reason_log:
                 if self.facts[fact].initial_fact:
                     self.reason_log[fact].append(f"{fact} is an initial fact.")
-                self.reason_log[fact].append(f"{fact} is already known to be TRUE.")
+                else:
+                    self.reason_log[fact].append(f"{fact} is already known to be TRUE.")
             elif self.facts[fact].state == Truth.FALSE and fact not in self.reason_log:
                 self.reason_log[fact].append(f"{fact} is already known to be FALSE.")
             return self.facts[fact].state
@@ -186,11 +189,7 @@ class ExpertSystem:
             else:
                 res = self.eval_expr(rule.premise, path)
             if res == Truth.TRUE:
-                for f in rv.out_facts:
-                    for r in f.out_rules:
-                        tmp_path = set()
-                        if self.eval_expr(r.premise, tmp_path, true_node=rule.conclusions) == Truth.TRUE:
-                            r.truth = Truth.TRUE
+                self.true_nodes.append(rule.conclusions)
                 if self.conclusion_guarantees_fact(rule.conclusions, fact):
                     self.reason_log[fact].append(
                         f"Rule '{rule.text}' fires and conclusively sets {fact} true.")
@@ -236,7 +235,7 @@ class ExpertSystem:
         return Truth.FALSE
 
     # Evaluate arbitrary expression node
-    def eval_expr(self, node: Node, path: Set[str], true_node: Node | None = None) -> Truth:
+    def eval_expr(self, node: Node, path: Set[str]) -> Truth:
         """
         Evaluates a logical expression represented by a node in the expert system.
         This method recursively evaluates the expression based on the type of node
@@ -248,27 +247,25 @@ class ExpertSystem:
         @type node: Node
         @param path: A set of facts currently being evaluated to detect cycles.
         @type path: Set[str]
-        @param true_node: An optional node that, if matched, will return TRUE immediately.
-        @type true_node: Node | None
 
         @return: The truth value of the evaluated expression (TRUE, FALSE, or UNKNOWN).
         @rtype: Truth
         """
-        if true_node and node == true_node:
+        if self.true_nodes and node in self.true_nodes:
             return Truth.TRUE
         # Fact node
         if isinstance(node, FactNode):
             return self.solve(node.name, path)
         # Unary node (negation)
         if isinstance(node, UnaryNode):
-            child_val = self.eval_expr(node.child, path, true_node)
+            child_val = self.eval_expr(node.child, path)
             if child_val == Truth.UNKNOWN:
                 return Truth.UNKNOWN
             return Truth.FALSE if child_val == Truth.TRUE else Truth.TRUE
         # Binary node (AND, OR, XOR)
         if isinstance(node, BinaryNode):
-            left = self.eval_expr(node.left, path, true_node)
-            right = self.eval_expr(node.right, path, true_node)
+            left = self.eval_expr(node.left, path)
+            right = self.eval_expr(node.right, path)
             op = node.op
             if op == TokenType.AND:
                 if left == Truth.FALSE or right == Truth.FALSE:

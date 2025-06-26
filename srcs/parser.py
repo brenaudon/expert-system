@@ -288,10 +288,28 @@ def parse_file(path: str) -> Tuple[List[Rule], Set[str], List[str]]:
             if not line:
                 continue
             if line.startswith("="):
-                initial_facts.update(list(line[1:].strip()))
+                init_facts_str = line[1:].strip()
+                for c in init_facts_str:
+                    if c.isspace():
+                        continue
+                    if c.isalpha() and c.isupper():
+                        initial_facts.add(c)
+                    else:
+                        raise ValueError(
+                            f"Invalid initial fact '{c}' in line: {raw.rstrip()}\n"
+                            "Facts must be uppercase letters (A-Z).")
                 continue
             if line.startswith("?"):
-                queries.extend(list(line[1:].strip()))
+                query_facts_str = line[1:].strip()
+                for c in query_facts_str:
+                    if c.isspace():
+                        continue
+                    if c.isalpha() and c.isupper():
+                        queries.append(c)
+                    else:
+                        raise ValueError(
+                            f"Invalid fact to query '{c}' in line: {raw.rstrip()}\n"
+                            "Facts must be uppercase letters (A-Z).")
                 continue
             # Must be a rule
             if "<=>" in line:
