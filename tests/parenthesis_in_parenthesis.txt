@@ -1,0 +1,6 @@
+(A + (B | C)) | D => E # A and B/C
+(F + G | H) | D => I # H is enough
+# D is enough in both cases
+
+=D
+?EI
