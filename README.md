@@ -91,7 +91,7 @@ The lexer (`tokenize`) returns a flat list: `[Token(TokenType.FACT,"A"), Token(T
 
 ## **Abstract Syntax Tree (AST)**
 
-An AST is a compact, hierarchical in-memory model that captures the logical structure of the expression but discards all non-essential punctuation and whitespace.  
+An AST is a compact, hierarchical in-memory model that captures the logical structure of the expression but discards all non-essential punctuation and whitespace.
 We build the AST in `parser.parse_expression()` using shunting‑yard algorithm.
 
 Each expression is converted into immutable, typed nodes:
