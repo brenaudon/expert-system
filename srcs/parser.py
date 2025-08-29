@@ -17,12 +17,12 @@ from typing import List, Set, Tuple, Union
 
 # Tokeniser & Grammar ----------------------------------------------------------
 
-TOKEN_RE = re.compile(r"\s*([A-Z]|!|\+|\||\^|\(|\)|=>|<=>|:)\s*")
+TOKEN_RE = re.compile(r"\s*([A-Z]|!|\+|\||\^|\(|\))\s*")
 """
 Regular expression to match tokens in the propositional logic expression.
 It matches:
     - Single uppercase letters (A-Z) representing facts.
-    - Operators: NOT (!), AND (+), OR (|), XOR (^), implication (=>), biconditional (<=>).
+    - Operators: NOT (!), AND (+), OR (|), XOR (^).
     - Parentheses: left ((), right ()).
 """
 

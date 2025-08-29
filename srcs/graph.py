@@ -36,7 +36,7 @@ class FactV:
     name: str
     state: Truth | None = None
     initial_fact: bool = False  # whether this fact was in the initial set of facts
-    in_rules:  Set["RuleV"] = field(default_factory=set) # rules that conclude this fact
+    in_rules: Set["RuleV"] = field(default_factory=set) # rules that conclude this fact
     out_rules: Set["RuleV"] = field(default_factory=set) # rules that require this fact
 
     # helpers so we can stick FactV objects in sets
@@ -66,7 +66,7 @@ class RuleV:
     premise: Node
     conclusions: Node
     truth: Truth = Truth.UNKNOWN
-    in_facts:  Set[FactV] = field(default_factory=set) # facts in premise
+    in_facts: Set[FactV] = field(default_factory=set) # facts in premise
     out_facts: Set[FactV] = field(default_factory=set) # facts in conclusion
     text: str = ""
 
